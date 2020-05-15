@@ -10,3 +10,4 @@ Description of Folders:
 
 1. Orbit_Spectra - Contains the SPENVIS and GEANT4 generated raw and Al shielded spectra from all sources in all orbits.
 2. EdepVsDistance - Contains the output of Eloss_Equivalence_Edep_Step-Final.py and input to Eloss_Equivalence_Minimal-ReadIn_NoLoop.py, the nuclear and electronic energy desposited as a function of distance from all particles in all materials.
+3. Stopping_Power - Contains the nuclear and electronic stopping power for all relevant particles in all relevant energy ranges.
