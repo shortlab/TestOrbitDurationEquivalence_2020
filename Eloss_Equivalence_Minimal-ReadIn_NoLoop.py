@@ -9,7 +9,7 @@
 #!{sys.executable} -m pip install --upgrade periodictable
 #!{sys.executable} -m pip install --upgrade brewer2mpl
 #!{sys.executable} -m pip install PAScual
-
+import matplotlib.gridspec as gridspec
 import numpy.random
 import scipy
 import scipy.optimize
@@ -32,7 +32,7 @@ import scipy.stats
 from scipy.interpolate import interp1d
 
 import csv
-                
+ import seaborn               
 
 
 import pandas as pd
@@ -84,7 +84,7 @@ test_Ebin_edep_n = pd.read_csv(fn, sep=',', names=['material', 'particle', 'E_bi
 fn = 'electronic_E_loss_vsEin_vsDistance_test.csv'
 test_Ebin_edep_e = pd.read_csv(fn, sep=',', names=['material', 'particle', 'E_bin_MeV', 'dist_um', 'E_dep_MeV'], engine='python')
 
-# goes from here to the end
+# goes from here to the end, this is used to distinguish the sources of He
 startHeE = 4.0*1.0000E-01
 stopHeE =  4.0*4.5000E+02
 
@@ -154,6 +154,8 @@ for keyvalue, filename in filenames.items():
     proton_spectrum['DFlux_cm2s'] = proton_spectrum['DFlux_cm2']/mission_time_s
     unshielded_solar_protons_noMagnetosphere[keyvalue] = proton_spectrum
     
+# Unshielded yes magnetosphere shielding solar spectra - protons
+    
 unshielded_solar_protons_yesMagnetosphere = {}
 unshielded_solar_He_yesMagnetosphere = {}
 filepath = '/Users/jvl2xv/anaconda/AFRL_RV/Test_Orbit_Spectra_Equivalence/Orbital_Spectra/Solar/WITH_MAGNETOSPHERE_SHIELDING/'
@@ -176,7 +178,8 @@ for keyvalue, filename in filenames.items():
     He_spectrum['DFlux_MeVcm2s'] = ion_spectrum.He_DFlux_cm2MeV_n*(1.0/mission_time_s)*(1/n)
     He_spectrum['DFlux_cm2s'] = He_spectrum['DFlux_cm2']/mission_time_s  
     unshielded_solar_He_yesMagnetosphere[keyvalue] = He_spectrum
-    
+ 
+# All unshielded, no magnetosphere GCR ions
                                                                              
 unshielded_H_galactic_noMagnetosphere = {}
 unshielded_He_galactic_noMagnetosphere = {}
@@ -218,6 +221,8 @@ for keyvalue, filename in filenames.items():
     unshielded_He_galactic_noMagnetosphere[keyvalue] = He_spectrum
     unshielded_C_galactic_noMagnetosphere[keyvalue] = C_spectrum
     unshielded_O_galactic_noMagnetosphere[keyvalue] = O_spectrum
+    
+# All unshielded, yes magnetosphere GCR ions
 
 unshielded_H_galactic_yesMagnetosphere = {}
 unshielded_He_galactic_yesMagnetosphere = {}
@@ -287,6 +292,8 @@ for keyvalue, filename in filenames.items():
     unshielded_Mg_galactic_yesMagnetosphere[keyvalue] = Mg_spectrum
     unshielded_Si_galactic_yesMagnetosphere[keyvalue] = Si_spectrum
     unshielded_Fe_galactic_yesMagnetosphere[keyvalue] = Fe_spectrum
+    
+# Put into an array
                                                                                
 unshielded_ion_galactic_yesMagnetosphere = {}                                                                    
 unshielded_ion_galactic_yesMagnetosphere['H'] = unshielded_H_galactic_yesMagnetosphere
@@ -310,15 +317,17 @@ Alshielded_neutrons_yesMagnetosphere = {}
 Alshielded_solarHe_yesMagnetosphere = {}
 Alshielded_GCRH_yesMagnetosphere = {}
 
+# Read in trapped, neutron, solar H with Al shielding from SPENVIS and 
+# solar He and GCR with Al shielding from GEANT4
+# all with magnetosphere shielding
 
 filepath = '/Users/jvl2xv/anaconda/AFRL_RV/Test_Orbit_Spectra_Equivalence/Orbital_Spectra/Shielded/WITH_MAGNETOSPHERE_SHIELDING/'
 for Al_thickness in Al_shielding_gcm2_names:
     for orbit_keyvalue, filename in filenames.items():
         fn = filepath + Al_thickness + '/' + filename
         keyvalue = orbit_keyvalue + '_' + Al_thickness
-        
-        print(keyvalue)
 
+        # this include trapped + solar H
         proton_spectrum = pd.read_csv(fn, sep=',', skiprows=13, skipfooter=121, names=['Energy_keV_low', 'Energy_keV_high', 'Energy_keV_mean', 'Flux_cm2bin', 'Error_Flux_cm2bin'], engine='python')
         E_width = (proton_spectrum['Energy_keV_high'] - proton_spectrum['Energy_keV_low'])/1000.0
         proton_spectrum['DFlux_MeVcm2s'] = (proton_spectrum.Flux_cm2bin/E_width)/mission_time_s
@@ -335,21 +344,27 @@ for Al_thickness in Al_shielding_gcm2_names:
         neutron_spectrum['DFlux_MeVcm2s'] = (neutron_spectrum.Flux_cm2bin/E_width)/mission_time_s
         Alshielded_neutrons_yesMagnetosphere[keyvalue] = neutron_spectrum
         
+        # from GEANT4, Al shielded solar He
         fn = '/Users/jvl2xv/anaconda/AFRL_RV/Test_Orbit_Spectra_Equivalence/Orbital_Spectra/Shielded_GEANT4_SolarHe/' + orbit_keyvalue + '_SolarHeSpectrum_' + Al_thickness + '_Al.txt' 
         solarHe_spectrum = pd.read_csv(fn, sep = ' ', names=['E_MeV', 'DFlux_MeVcm2s'])
         Alshielded_solarHe_yesMagnetosphere[keyvalue] = solarHe_spectrum 
 
-        
+        # from GEANT4, Al shielded GCR H, add to other protons to propogate through together
         fn = '/Users/jvl2xv/anaconda/AFRL_RV/Test_Orbit_Spectra_Equivalence/Orbital_Spectra/Shielded_GEANT4_GCRH/' + orbit_keyvalue + '_GCRHSpectrum_' + Al_thickness + '_Al.txt' 
         GCRH_spectrum = pd.read_csv(fn, sep = ' ', names=['E_MeV', 'DFlux_MeVcm2s'])
+        # add GCR H to all other H from trapped and solar
         proton_spectrum['DFlux_MeVcm2s'] = proton_spectrum['DFlux_MeVcm2s'] + GCRH_spectrum['DFlux_MeVcm2s']
-        Alshielded_GCRH_yesMagnetosphere[keyvalue] = GCRH_spectrum
+        Alshielded_GCRH_yesMagnetosphere[keyvalue] = GCRH_spectrum   
         
         Alshielded_protons_yesMagnetosphere[keyvalue] = proton_spectrum
 
+    
 Alshielded_protons_noMagnetosphere = {}
 Alshielded_electrons_noMagnetosphere = {}
 Alshielded_neutrons_noMagnetosphere = {}
+
+# Read in trapped, neutron, solar H with Al shielding from SPENVIS and 
+# all without magnetosphere shielding, we don't use these
 
 filepath = '/Users/jvl2xv/anaconda/AFRL_RV/Test_Orbit_Spectra_Equivalence/Orbital_Spectra/Shielded/WITHOUT_MAGNETOSPHERE_SHIELDING/'
 for Al_thickness in Al_shielding_gcm2_names:
@@ -371,27 +386,28 @@ for Al_thickness in Al_shielding_gcm2_names:
         neutron_spectrum['DFlux_MeVcm2s'] = (neutron_spectrum.Flux_cm2bin/E_width)/mission_time_s
         Alshielded_neutrons_noMagnetosphere[keyvalue] = neutron_spectrum
         
-# this contains all of the proton energies to propogate through for all orbits and shieldings, MeV
+# this contains all of the proton energies to propogate through for all orbits and shieldings, MeV, average
 protons_Al_shielded_bin_energies_all_yesMagnetosphere = (0.5/1000.0)*(Alshielded_protons_yesMagnetosphere['LEO_600_0p1']['Energy_keV_low']+Alshielded_protons_yesMagnetosphere['LEO_600_0p1']['Energy_keV_high'])
 
-# this contains all of the proton energies to propogate through for all orbits and shieldings, MeV
+# this contains all of the electron energies to propogate through for all orbits and shieldings, MeV
 electrons_Al_shielded_bin_energies_all_yesMagnetosphere = (0.5/1000.0)*(Alshielded_electrons_yesMagnetosphere['LEO_600_0p1']['Energy_keV_low']+Alshielded_electrons_yesMagnetosphere['LEO_600_0p1']['Energy_keV_high'])
 
 
 # In[4]:
 
 
-# sum up for without Al shielding:
+# sum up all protons for without Al shielding, with shielding were summed above by default
 
 # this contains all of the proton energies to propogate through for all orbits and with no shielding
 protons_unshielded_bin_energies_all_yesMagnetosphere = numpy.append(numpy.array(unshielded_solar_protons_yesMagnetosphere['LEO_600']['Energy_MeV']), [5.5e+02, 6.0e+02, 6.5e+02, 7.0e+02, 7.5e+02, 8.0e+02, 8.5e+02, 9.0e+02, 9.5e+02, 1.0e+03])
 protons_unshielded_all_yesMagnetosphere_DFlux_MeVcm2s = {}
 
-# for each orbit
+# for each orbit, all have same energy bins
 for keyvalue, filename in filenames.items():
     this_sum = numpy.zeros(len(protons_unshielded_bin_energies_all_yesMagnetosphere))
     # for each energy in the orbit
     for num, E_current in enumerate(protons_unshielded_bin_energies_all_yesMagnetosphere):
+        # flux sum for this energy bin from all proton sources (trapped, solar, GCR)
         this_E_sum = 0       
         orbit_function = interp1d(unshielded_trapped_protons[keyvalue].Energy_MeV, unshielded_trapped_protons[keyvalue].DFlux_MeVcm2s, kind='quadratic', bounds_error = False, fill_value = 0)
         this_E_sum = this_E_sum + max(orbit_function(E_current),0.0)
@@ -399,12 +415,12 @@ for keyvalue, filename in filenames.items():
         this_E_sum = this_E_sum + max(orbit_function(E_current),0.0)
         orbit_function = interp1d(unshielded_H_galactic_yesMagnetosphere[keyvalue].Energy_MeV, (1.0/10000.0)*math.pi*unshielded_H_galactic_yesMagnetosphere[keyvalue].H_DFlux_m2sSrMeV, kind='quadratic', bounds_error = False, fill_value = 0)
         this_E_sum = this_E_sum + max(orbit_function(E_current),0.0) 
-
+        # write the total proton flux for this energy bin
         this_sum[num] = this_E_sum
-        
+    # write the total proton fluxes for all energy bins
     protons_unshielded_all_yesMagnetosphere_DFlux_MeVcm2s[keyvalue] = this_sum
 
-
+# put electrons in the same format, only one source (trapped so nothing to sum)
 electrons_unshielded_bin_energies_all_yesMagnetosphere = numpy.array(unshielded_trapped_electrons['LEO_600']['Energy_MeV'])
 electrons_unshielded_all_yesMagnetosphere_DFlux_MeVcm2s = {}
 for keyvalue, filename in filenames.items():
@@ -412,14 +428,14 @@ for keyvalue, filename in filenames.items():
 
 
 
-# In[41]:
+# In[5]:
 
 
 # Sum up the energy deposited for each of the orbits / shieldings, include all particles
-# 0 Al shielding
 
+
+# Compute 3 times including a subset of GCR ions to see which ones matter
 inc = ['noIon', 'justSolarHe', 'allIon']
-
 for inclusion in inc:
 
     edep_vs_Dist_n = {}
@@ -435,57 +451,64 @@ for inclusion in inc:
             kv1 = Al_thickness + '_' + sm                
             # for each of the orbits
             for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-
+                    # this is the total key to get the flux
                     kv2 = kv1 + '_' + orbit_keyvalue
                     print(kv2)
 
-                    # wrote the sum for every 10 microns
+                    # wrote the sum for every 10 microns, 2000 microns in total (2 mm)
                     cum_edep_n = numpy.zeros(200)
                     cum_edep_e = numpy.zeros(200)
 
-                    ## PROTONS
+                    ##  1 ## PROTONS
                     proton_flux = protons_unshielded_all_yesMagnetosphere_DFlux_MeVcm2s[orbit_keyvalue]
                     proton_energy = protons_unshielded_bin_energies_all_yesMagnetosphere
                     proton_energy_widths = numpy.diff(proton_energy, prepend=0)  
-
+                    
+                    # get edep, nuclear and electronic, for this semi and this particle
                     edep_this_n = unshielded_Ebin_edep_n[unshielded_Ebin_edep_n.material == sm]
                     edep_this_n = edep_this_n[edep_this_n.particle == 'p']
                     edep_this_e = unshielded_Ebin_edep_e[unshielded_Ebin_edep_e.material == sm]
                     edep_this_e = edep_this_e[edep_this_e.particle == 'p']
+                    # for edep, nuclear and electronic, for each semi/particle/flux incident energy bin
                     for num_E, eBin in enumerate(proton_energy):
                         edep_this_nn = edep_this_n[edep_this_n.E_bin_MeV == eBin]
                         edep_this_nn = numpy.array(edep_this_nn['E_dep_MeV'])
                         edep_this_ee = edep_this_e[edep_this_e.E_bin_MeV == eBin]
                         edep_this_ee = numpy.array(edep_this_ee['E_dep_MeV'])
-
+                        
+                        # add the flux weighted energy deposition as a function of distance
                         cum_edep_n = cum_edep_n + edep_this_nn*proton_flux[num_E]*proton_energy_widths[num_E]
                         cum_edep_e = cum_edep_e + edep_this_ee*proton_flux[num_E]*proton_energy_widths[num_E]
 
-                    ## ELECTRONS 
+                    ## 2 ## ELECTRONS 
                     electron_flux = electrons_unshielded_all_yesMagnetosphere_DFlux_MeVcm2s[orbit_keyvalue]
                     electron_energy = electrons_unshielded_bin_energies_all_yesMagnetosphere
                     electron_energy_widths = numpy.diff(electron_energy, prepend=0)  
-
+                    
+                    # get edep, nuclear and electronic, for this semi and this particle
                     edep_this_n = unshielded_Ebin_edep_n[unshielded_Ebin_edep_n.material == sm]
                     edep_this_n = edep_this_n[edep_this_n.particle == 'e']
                     edep_this_e = unshielded_Ebin_edep_e[unshielded_Ebin_edep_e.material == sm]
                     edep_this_e = edep_this_e[edep_this_e.particle == 'e']
+                    # for edep, nuclear and electronic, for each semi/particle/flux incident energy bin
                     for num_E, eBin in enumerate(electron_energy):
                         edep_this_nn = edep_this_n[edep_this_n.E_bin_MeV == eBin]
                         edep_this_nn = numpy.array(edep_this_nn['E_dep_MeV'])
                         edep_this_ee = edep_this_e[edep_this_e.E_bin_MeV == eBin]
                         edep_this_ee = numpy.array(edep_this_ee['E_dep_MeV'])
 
+                        # add the flux weighted energy deposition as a function of distance
                         cum_edep_n = cum_edep_n + edep_this_nn*electron_flux[num_E]*electron_energy_widths[num_E]
                         cum_edep_e = cum_edep_e + edep_this_ee*electron_flux[num_E]*electron_energy_widths[num_E]
-                        
+                     
+                    # if including solar He or all ions
                     if (inclusion == 'justSolarHe') or (inclusion == 'allIon'):
 
-                        ## SOLAR HE
+                        ## 3 ## SOLAR HE
                         solarHe_flux = unshielded_solar_He_yesMagnetosphere[orbit_keyvalue].DFlux_MeVcm2s
                         solarHe_energy = unshielded_solar_He_yesMagnetosphere[orbit_keyvalue].Energy_MeV
                         solarHe_energy_widths = numpy.diff(solarHe_energy, prepend=0)  
-
+                        # get just the solar He (not GCR)
                         edep_this_n = unshielded_Ebin_edep_n[(unshielded_Ebin_edep_n.material == sm) & (unshielded_Ebin_edep_n.index >= solarHe_startIndex)]
                         edep_this_n = edep_this_n[edep_this_n.particle == 'He']
                         edep_this_e = unshielded_Ebin_edep_e[(unshielded_Ebin_edep_e.material == sm) & (unshielded_Ebin_edep_n.index >= solarHe_startIndex)]
@@ -495,14 +518,16 @@ for inclusion in inc:
                             edep_this_nn = numpy.array(edep_this_nn['E_dep_MeV'])
                             edep_this_ee = edep_this_e[edep_this_e.E_bin_MeV == eBin]
                             edep_this_ee = numpy.array(edep_this_ee['E_dep_MeV'])
-
+        
+                            # add the flux weighted energy deposition as a function of distance
                             cum_edep_n = cum_edep_n + edep_this_nn*solarHe_flux[num_E]*solarHe_energy_widths[num_E]
                             cum_edep_e = cum_edep_e + edep_this_ee*solarHe_flux[num_E]*solarHe_energy_widths[num_E]
 
+                        # if including all ions
                         if (inclusion == 'allIon'):
                         
                             ## ALL GCR IONS
-
+                            # convert to per cm2 s MeV
                             gcrHe_spectrum = unshielded_He_galactic_yesMagnetosphere[orbit_keyvalue]['He_DFlux_m2sSrMeV']*(1.0/10000.0)*math.pi
                             gcrHe_energies = unshielded_He_galactic_yesMagnetosphere[orbit_keyvalue]['Energy_MeV']
                             gcrC_spectrum = unshielded_C_galactic_yesMagnetosphere[orbit_keyvalue]['C_DFlux_m2sSrMeV']*(1.0/10000.0)*math.pi
@@ -520,11 +545,11 @@ for inclusion in inc:
                             gcrFe_spectrum = unshielded_Fe_galactic_yesMagnetosphere[orbit_keyvalue]['Fe_DFlux_m2sSrMeV']*(1.0/10000.0)*math.pi
                             gcrFe_energies = unshielded_Fe_galactic_yesMagnetosphere[orbit_keyvalue]['Energy_MeV']
 
-
+                            # put together so that you can loop through
                             extra_ion_spectra = [gcrHe_spectrum, gcrC_spectrum, gcrO_spectrum, gcrN_spectrum, gcrNe_spectrum, gcrMg_spectrum, gcrSi_spectrum, gcrFe_spectrum]
                             extra_ion_energies = [gcrHe_energies, gcrC_energies, gcrO_energies, gcrN_energies, gcrNe_energies, gcrMg_energies, gcrSi_energies, gcrFe_energies]
                             extra_ions = ['He', 'C', 'O', 'N', 'Ne', 'Mg', 'Si', 'Fe']
-
+                            # for each GCR ion
                             for ion_num, ion in enumerate(extra_ions):
                                 # incident energies from this orbit - ion
                                 ion_energy = extra_ion_energies[ion_num] 
@@ -535,17 +560,22 @@ for inclusion in inc:
                                 edep_this_e = unshielded_Ebin_edep_e[(unshielded_Ebin_edep_e.material == sm) & (unshielded_Ebin_edep_e.index <= solarHe_startIndex) & (unshielded_Ebin_edep_e.particle  == ion)]
 
                                 for num_E, eBin in enumerate(ion_energy):
+                                    # because of slight rounding errors in what was written
                                     eBin = round(eBin,2)
                                     edep_this_nn = edep_this_n[numpy.round(edep_this_n.E_bin_MeV,2) == eBin]
                                     edep_this_nn = numpy.array(edep_this_nn['E_dep_MeV'])
                                     edep_this_ee = edep_this_e[numpy.round(edep_this_e.E_bin_MeV,2) == eBin]
                                     edep_this_ee = numpy.array(edep_this_ee['E_dep_MeV'])
 
+                                    # add the flux weighted energy deposition as a function of distance
                                     cum_edep_n = cum_edep_n + edep_this_nn*ion_flux[num_E]*ion_energy_widths[num_E]
                                     cum_edep_e = cum_edep_e + edep_this_ee*ion_flux[num_E]*ion_energy_widths[num_E]
 
 
-
+                    # append edep as a function of distance to the dictionary by key
+                    # works with distinguished inclusion because we just summed the applicable
+                    # ones to this for this loop so distinguish by which loop you are on
+                    # key includes - Al shielding, material, orbit
                     edep_vs_Dist_n[kv2] = cum_edep_n
                     edep_vs_Dist_e[kv2] = cum_edep_e
 
@@ -562,67 +592,74 @@ for inclusion in inc:
                     kv2 = kv1 + '_' + orbit_keyvalue
                     print(kv2)
 
-                    # wrote the sum for every 10 microns
+                    # wrote the sum for every 10 microns, 2 mm total
                     cum_edep_n = numpy.zeros(200)
                     cum_edep_e = numpy.zeros(200)
-
+                    ## 1 ## PROTONS - incudes all (trapped, solar, GCR)
                     proton_flux = Alshielded_protons_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].DFlux_MeVcm2s
+                    # this is the average for the bin
                     proton_energy = Alshielded_protons_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].Energy_MeV
+                    # this is upper energy to get accurate bin widths
                     proton_energy_upper = (0.001)*Alshielded_protons_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].Energy_keV_high
                     proton_energy_widths = numpy.diff(proton_energy_upper, prepend=0)   
-
+                    # get energy deposition as a function of distance for semi and particle
                     edep_this_n = shielded_Ebin_edep_n[shielded_Ebin_edep_n.material == sm]
                     edep_this_n = edep_this_n[edep_this_n.particle == 'p']
                     edep_this_e = shielded_Ebin_edep_e[shielded_Ebin_edep_e.material == sm]
                     edep_this_e = edep_this_e[edep_this_e.particle == 'p']
+                    # and for incident energy of the flux bin
                     for num_E, eBin in enumerate(proton_energy):
                         edep_this_nn = edep_this_n[edep_this_n.E_bin_MeV == eBin]
                         edep_this_nn = numpy.array(edep_this_nn['E_dep_MeV'])
                         edep_this_ee = edep_this_e[edep_this_e.E_bin_MeV == eBin]
                         edep_this_ee = numpy.array(edep_this_ee['E_dep_MeV'])
-
+                        # add edep as a function of distance to the total weighted by the flux of that incident energy
                         cum_edep_n = cum_edep_n + edep_this_nn*proton_flux[num_E]*proton_energy_widths[num_E]
                         cum_edep_e = cum_edep_e + edep_this_ee*proton_flux[num_E]*proton_energy_widths[num_E]
-
+                    ## 2 ## ELECTRONS - trapped
                     electron_flux = Alshielded_electrons_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].DFlux_MeVcm2s
+                    # average energy of the flux bin
                     electron_energy = Alshielded_electrons_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].Energy_MeV
+                    # max energy of the flux bin (so acccurate widths)
                     electron_energy_upper = (0.001)*Alshielded_electrons_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].Energy_keV_high               
                     electron_energy_widths = numpy.diff(electron_energy_upper, prepend=0) 
-
+                    # get energy deposition as a function of distance for semi and particle
                     edep_this_n = shielded_Ebin_edep_n[shielded_Ebin_edep_n.material == sm]
                     edep_this_n = edep_this_n[edep_this_n.particle == 'e']
                     edep_this_e = shielded_Ebin_edep_e[shielded_Ebin_edep_e.material == sm]
                     edep_this_e = edep_this_e[edep_this_e.particle == 'e']
+                    # and for incident energy of the flux bin
                     for num_E, eBin in enumerate(electron_energy):
                         edep_this_nn = edep_this_n[edep_this_n.E_bin_MeV == eBin]
                         edep_this_nn = numpy.array(edep_this_nn['E_dep_MeV'])
                         edep_this_ee = edep_this_e[edep_this_e.E_bin_MeV == eBin]
                         edep_this_ee = numpy.array(edep_this_ee['E_dep_MeV'])
-
+                        # add edep as a function of distance to the total weighted by the flux of that incident energy
                         cum_edep_n = cum_edep_n + edep_this_nn*electron_flux[num_E]*electron_energy_widths[num_E]
                         cum_edep_e = cum_edep_e + edep_this_ee*electron_flux[num_E]*electron_energy_widths[num_E]
-
+                    ## 3 ## HE - only solar matters from above comp of trapped
                     solarHe_flux = Alshielded_solarHe_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].DFlux_MeVcm2s
                     solarHe_energy = Alshielded_solarHe_yesMagnetosphere[orbit_keyvalue+'_'+Al_thickness].E_MeV
                     solarHe_energy_widths = numpy.diff(numpy.concatenate((solarHe_energy,[0])))
-
+                    # get energy deposition as a function of distance for semi and particle
                     edep_this_n = shielded_Ebin_edep_n[shielded_Ebin_edep_n.material == sm]
                     edep_this_n = edep_this_n[edep_this_n.particle == 'He']
                     edep_this_e = shielded_Ebin_edep_e[shielded_Ebin_edep_e.material == sm]
                     edep_this_e = edep_this_e[edep_this_e.particle == 'He']
+                    # and for incident energy of the flux bin
                     for num_E, eBin in enumerate(solarHe_energy):
                         edep_this_nn = edep_this_n[edep_this_n.E_bin_MeV == eBin]
                         edep_this_nn = numpy.array(edep_this_nn['E_dep_MeV'])[0:200]
                         edep_this_ee = edep_this_e[edep_this_e.E_bin_MeV == eBin]
                         edep_this_ee = numpy.array(edep_this_ee['E_dep_MeV'])[0:200]
-
+                        # add edep as a function of distance to the total weighted by the flux of that incident energy
                         cum_edep_n = cum_edep_n + edep_this_nn*solarHe_flux[num_E]*solarHe_energy_widths[num_E]
                         cum_edep_e = cum_edep_e + edep_this_ee*solarHe_flux[num_E]*solarHe_energy_widths[num_E]
 
                     edep_vs_Dist_n[kv2] = cum_edep_n
                     edep_vs_Dist_e[kv2] = cum_edep_e
 
-
+    # write which ions are included so that we can later make the comparison
     if inclusion == 'noIon':
         orbit_Edep_percm2Second_all_shield_nuclear_no_ion = edep_vs_Dist_n
         orbit_Edep_percm2Second_all_shield_electronic_no_ion = edep_vs_Dist_e
@@ -635,39 +672,25 @@ for inclusion in inc:
 
 
 
-# In[42]:
-
-
-# Sum up the energy deposited for each of the test energies
-test_Energies = [ 63.,  70., 100., 200., 230.]
-
-for mat_num, sm in enumerate(material_densities):
-    for testE_num, testE in enumerate(test_Energies):
-        this_test_edep_n = test_Ebin_edep_n[test_Ebin_edep_n.E_bin_MeV == testE]
-        this_test_edep_n = this_test_edep_n[this_test_edep_n.material == sm]
-
-
-# In[44]:
+# In[7]:
 
 
 # Calculate the normal equivalence (non-iso)
+# real distance in microns, recall wrote every 10 microns before
 dist = numpy.arange(0,2000,10)
+# nice spacing of distance values to record, don't want to make it too big
 max_D_um_vals = numpy.concatenate((numpy.arange(10,101,10), numpy.arange(120,250,20), numpy.arange(250,1000,50), numpy.arange(1000,2001,100)))
 
 
 # MeV
-test_Energies = [ 63.,  70., 100., 200., 230.]
+test_Energies = [ 10., 15., 25., 35., 45., 63.,  70., 100., 200., 230.]
 # number/cm2
 test_Fluence = 7.5*10**11
 
 max_D_um = numpy.concatenate((numpy.arange(10,101,10), numpy.arange(120,250,20), numpy.arange(250,1000,50), numpy.arange(1000,2000,100)))
 
-
-for inclusion in inc:
-    
-    orbit_Edep_percm2Second_all_shield_nuclear_this = orbit_Edep_percm2Second_all_shield_nuclear_just_solarHe
-    orbit_Edep_percm2Second_all_shield_electronic_this = orbit_Edep_percm2Second_all_shield_electronic_just_solarHe
-
+# for each level of ion inclusion
+for inclusion in inc:    
     if inclusion == 'noIon':
         orbit_Edep_percm2Second_all_shield_nuclear_this = orbit_Edep_percm2Second_all_shield_nuclear_no_ion
         orbit_Edep_percm2Second_all_shield_electronic_this = orbit_Edep_percm2Second_all_shield_electronic_no_ion
@@ -687,7 +710,7 @@ for inclusion in inc:
     times_s_n = []
     times_s_e = []
     max_distances = []
-
+    # for all shieldings
     for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
         # for each material
         for num, sm in enumerate(material_densities):
@@ -697,29 +720,29 @@ for inclusion in inc:
                 # Key = AlThickness_Orbit_Material
                 kv2 = kv1 + '_' + orbit_keyvalue
                 print(kv2)
-
+                # preset material thicknesses to consider in micron
                 for max_D_um in max_D_um_vals:
-
+                    # arg not equal to um because only wrote every 10
                     max_arg = numpy.argmin(abs(dist - max_D_um)) + 1
-                    if kv2 == '0.0_CdTe_LEO_600':
-                        print(max_arg)
-
+                    # sum the flux weighted energy deposition for the thickness of interest
                     eDepOrbit_cm2s_n = sum(orbit_Edep_percm2Second_all_shield_nuclear_this[kv2][0:max_arg])
                     eDepOrbit_cm2s_e = sum(orbit_Edep_percm2Second_all_shield_electronic_this[kv2][0:max_arg])
-
+                    # for each test energy
                     for testE_num, testE in enumerate(test_Energies):
-
+                        # get edep for this test energy and material
                         this_test_edep_n = test_Ebin_edep_n[test_Ebin_edep_n.E_bin_MeV == testE]
                         this_test_edep_n = this_test_edep_n[this_test_edep_n.material == sm]
+                        # sum the fluence weighted energy deposition for the thickness of interest
                         eDepTest_cm2_n = sum(test_Fluence*this_test_edep_n['E_dep_MeV'][0:max_arg])
-
+                        # get edep for this test energy and material
                         this_test_edep_e = test_Ebin_edep_e[test_Ebin_edep_e.E_bin_MeV == testE]
                         this_test_edep_e = this_test_edep_e[this_test_edep_e.material == sm]
+                        # sum the fluence weighted energy deposition for the thickness of interest
                         eDepTest_cm2_e = sum(test_Fluence*this_test_edep_e['E_dep_MeV'][0:max_arg])
-
+                        # divide fluence by flux weighted edep to get time
                         time_s_n = eDepTest_cm2_n/eDepOrbit_cm2s_n
                         time_s_e = eDepTest_cm2_e/eDepOrbit_cm2s_e
-
+                        # write the indices
                         Al_thicks.append(Al_shielding_gcm2_dict[Al_thickness])
                         mats.append(sm)
                         orbits.append(orbit_legvalue)
@@ -745,23 +768,16 @@ for inclusion in inc:
     #All_equivalence_normal.to_csv('All_equivalence_7p5E11_F_normal.csv')
 
 
-# In[49]:
+# In[8]:
 
 
-All_equivalence_data_normal_no_ion['Electronic_Equivalence_s']
-
-
-# In[67]:
-
-
-import seaborn
-
-# Plot the ion inclusion sensitivity stuff
+# Plot the ion inclusion sensitivity equivalent durations
 
 st_um = 500
 mat = 'Si'
 E_MeV = 63.0
 
+# get the equivalences for the different ion inclusions
 data = All_equivalence_normal_no_ion
 no_ion_E = data.Electronic_Equivalence_s
 no_ion_N = data.Nuclear_Equivalence_s
@@ -772,22 +788,24 @@ data = All_equivalence_normal_all_ion
 all_ion_E = data.Electronic_Equivalence_s
 all_ion_N = data.Nuclear_Equivalence_s
 
+# fractional error - duration longer if fewer ions included, which is why we need this order to be +
 err_no_ion_E = (-all_ion_E+no_ion_E)/no_ion_E
 err_no_ion_N = (-all_ion_N+no_ion_N)/no_ion_N
-
+# fractional error - duration longer if fewer ions included, which is why we need this order to be +
 err_just_solarHe_E = (-all_ion_E+just_solarHe_E)/just_solarHe_E
 err_just_solarHe_N = (-all_ion_N+just_solarHe_N)/just_solarHe_N
 
+# record errors
 All_equivalence_normal_all_ion['err_no_ion_E'] = err_no_ion_E
 All_equivalence_normal_all_ion['err_no_ion_N'] = err_no_ion_N
 
 All_equivalence_normal_all_ion['err_just_solarHe_E'] = err_just_solarHe_E
 All_equivalence_normal_all_ion['err_just_solarHe_N'] = err_just_solarHe_N
 
-All_equivalence_normal_all_ion
-
+# thickness, just showing one
 t = 500
 
+# plot errors in nuclear equivalent duration, recall only calculated in no Al shielding case
 fig = matplotlib.pyplot.figure(dpi=200, figsize=(10,10))
 legend_strings = []
 ax = fig.add_subplot(2,2,1)
@@ -809,10 +827,8 @@ matplotlib.pyplot.xlabel('')
 matplotlib.pyplot.tick_params(axis='y', labelleft=False)
 matplotlib.pyplot.tick_params(axis='x', labelleft=False)
 matplotlib.pyplot.grid(b=None, which='major', axis='y', color='grey', linestyle='-', linewidth=.2)
-#matplotlib.pyplot.show()
 
-#fig = matplotlib.pyplot.figure(dpi=200, figsize=(10,4))
-
+# plot errors in electronic equivalent duration, recall only calculated in no Al shielding case
 ax = fig.add_subplot(2,2,3)
 seaborn.stripplot(x='Test_Energy_MeV', y='err_no_ion_E', hue='Orbit', data=All_equivalence_normal_all_ion[(All_equivalence_normal_all_ion.Al_Shielding_Thickness_gcm2 == 0.0) & (All_equivalence_normal_all_ion.Sample_thickness_um == t)])
 matplotlib.pyplot.ylim([-0.01,0.1])
@@ -831,19 +847,23 @@ matplotlib.pyplot.grid(b=None, which='major', axis='y', color='grey', linestyle=
 matplotlib.pyplot.show()
 
 
-# In[68]:
+# In[9]:
 
 
-# Calculate the isotropic conversion 
+# Calculate the isotropic conversion
 
+
+# to store isotropic results in
 orbit_Edep_percm2Second_all_shield_nuclear_just_solarHe_iso = {}
 orbit_Edep_percm2Second_all_shield_electronic_just_solarHe_iso = {}
 
 dist = numpy.arange(0,200,1)
+# 0 to 1 to sample from the CDF
 probs = numpy.random.uniform(0, 1, 100000)
+# drawn thetas from the PDF associated with the CFF
 thetas = numpy.arcsin(probs**(1/2))
 
-
+# for each Al thickness
 for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
     # for each material
     for num, sm in enumerate(material_densities):
@@ -852,45 +872,44 @@ for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
         for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
             # Key = AlThickness_Orbit_Material
             kv2 = kv1 + '_' + orbit_keyvalue
-            print(kv2)
             
             # this is the normal incidence energy deposition - nuclear and electronic
+            # previously determined that just solar He was enough
             this_n = orbit_Edep_percm2Second_all_shield_nuclear_just_solarHe[kv2]
             this_e = orbit_Edep_percm2Second_all_shield_electronic_just_solarHe[kv2]
             
+            # to store the iso
             this_n_iso = numpy.zeros(200)
             this_e_iso = numpy.zeros(200)
             
 
             # these are the indices of the edep when projected normal to the surface so add to the normal distance
             # edep is the energy deposited along the straight line of the incident particle in some direction
+            # for each isotropic angle of origin
             for theta in thetas:
-                dist_proj = numpy.round(dist*numpy.cos(theta)).astype('int')               
+                dist_proj = numpy.floor(dist*numpy.cos(theta)).astype('int')    
+                # add projection
                 numpy.add.at(this_n_iso, dist_proj, this_n)
                 numpy.add.at(this_e_iso, dist_proj, this_e)
                 
-                
-                #for num_dist_proj, dp in enumerate(dist_proj):
-                #    this_n_iso[dp] = this_n_iso[dp] + this_n[num_dist_proj]
-                #    this_e_iso[dp] = this_e_iso[dp] + this_e[num_dist_proj]
-                    
-           
+            # append results, convert back to initial energy by dividing by the number of sums taken
             orbit_Edep_percm2Second_all_shield_nuclear_just_solarHe_iso[kv2] = this_n_iso/len(thetas)
             orbit_Edep_percm2Second_all_shield_electronic_just_solarHe_iso[kv2] = this_e_iso/len(thetas)
             
      
 
 
-# In[69]:
+# In[10]:
 
 
-# Calculate the isotropic equivalence 
+# Calculate the isotropic equivalence - for special fluence
 dist = numpy.arange(0,2000,10)
+# calculate the equivalence for this subset of material thicknesses
 max_D_um_vals = numpy.concatenate((numpy.arange(10,101,10), numpy.arange(120,250,20), numpy.arange(250,1000,50), numpy.arange(1000,2001,100)))
 
 
 # MeV
-test_Energies = [ 63.,  70., 100., 200., 230.]
+test_Energies = [ 10., 15., 25., 35., 45., 63.,  70., 100., 200., 230.]
 # number/cm2
 test_Fluence = 7.5*10**11
 
@@ -904,6 +923,7 @@ times_s_n = []
 times_s_e = []
 max_distances = []
 
+# for each Al thickness
 for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
     # for each material
     for num, sm in enumerate(material_densities):
@@ -913,17 +933,17 @@ for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
             # Key = AlThickness_Orbit_Material
             kv2 = kv1 + '_' + orbit_keyvalue
             print(kv2)
-                       
+            # for each relevant thickness        
             for max_D_um in max_D_um_vals:
-                
+                # get index of that thicknesss because written every 10 microns
                 max_arg = numpy.argmin(abs(dist - max_D_um)) + 1
-
-            
+                # get the energy deposition as a function of distance for this shielding, orbit, material, sum for thickness of interest
                 eDepOrbit_cm2s_n = sum(orbit_Edep_percm2Second_all_shield_nuclear_just_solarHe_iso[kv2][0:max_arg])
                 eDepOrbit_cm2s_e = sum(orbit_Edep_percm2Second_all_shield_electronic_just_solarHe_iso[kv2][0:max_arg])
-
+                
+                # for each test energy
                 for testE_num, testE in enumerate(test_Energies):
-
+                    # get edep as a function of distance for this test energy and material and sum the desired distance
                     this_test_edep_n = test_Ebin_edep_n[test_Ebin_edep_n.E_bin_MeV == testE]
                     this_test_edep_n = this_test_edep_n[this_test_edep_n.material == sm]
                     eDepTest_cm2_n = sum(test_Fluence*this_test_edep_n['E_dep_MeV'][0:max_arg])
@@ -931,10 +951,10 @@ for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
                     this_test_edep_e = test_Ebin_edep_e[test_Ebin_edep_e.E_bin_MeV == testE]
                     this_test_edep_e = this_test_edep_e[this_test_edep_e.material == sm]
                     eDepTest_cm2_e = sum(test_Fluence*this_test_edep_e['E_dep_MeV'][0:max_arg])
-
+                    # divide fluence weigted by flux weighted to get time
                     time_s_n = eDepTest_cm2_n/eDepOrbit_cm2s_n
                     time_s_e = eDepTest_cm2_e/eDepOrbit_cm2s_e
-
+                    # store keys
                     Al_thicks.append(Al_shielding_gcm2_dict[Al_thickness])
                     mats.append(sm)
                     orbits.append(orbit_legvalue)
@@ -944,386 +964,519 @@ for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
                     max_distances.append(max_D_um)
 
                 
-            
+# write - recall this is for 7.5E11 fluence, isotropic            
 All_equivalence_data_iso = {'Sample_thickness_um':numpy.array(max_distances), 'Al_Shielding_Thickness_gcm2':numpy.array(Al_thicks), 'Material':numpy.array(mats), 'Orbit':numpy.array(orbits), 'Test_Energy_MeV':numpy.array(testEs), 'Electronic_Equivalence_s': numpy.array(times_s_e), 'Nuclear_Equivalence_s':numpy.array(times_s_n) }
 All_equivalence_iso = pd.DataFrame(All_equivalence_data_iso)             
 All_equivalence_iso.to_csv('All_equivalence_7p5E11_F_iso.csv')
 
 
-# In[72]:
+# In[13]:
 
 
-# Calculate isotropic equivalence as a function of fluence
+# Calculate isotropic equivalence per 10**11 p/cm2 fluence (slope)
 # number/cm2
-fluences = numpy.geomspace(10**10,10**15, 10)
 
-# Calculate the isotropic equivalence 
+# diff = 10^11
+fluences = [ 1*10**11, 2*10**11, 3*10**11]
+
+# real distance in microns, recall wrote every 10 microns before
 dist = numpy.arange(0,2000,10)
-# um, material thickness
-max_D_um_val = 500
-mat = 'Si'
+# nice spacing of distance values to record, don't want to make it too big
+max_D_um_vals = numpy.concatenate((numpy.arange(10,101,10), numpy.arange(120,250,20), numpy.arange(250,1000,50), numpy.arange(1000,2001,100)))
+
 # MeV
-test_Energies = [ 63.,  70., 100., 200., 230.]
-# g/cm2
-Al_thickness = '1p0' 
+test_Energies = [ 10., 15., 25., 35., 45., 63.,  70., 100., 200., 230.]
+
 
 Al_thicks = []
 mats = []
 orbits = []
 testEs = []
-times_s_n = []
-times_s_e = []
 max_distances = []
-fluence_values = []
+slope_n = []
+slope_e = []
 
 
-for num, Al_thickness in enumerate([Al_thickness]):
+for num, Al_thickness in enumerate(Al_shielding_gcm2_dict):
     # for each material
-    for num, sm in enumerate([mat]):
+    for num, sm in enumerate(material_densities):
         # make the start of the legend, the aluminum thickness and semiconductor
         kv1 = Al_thickness + '_' + sm                
         for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
             # Key = AlThickness_Orbit_Material
             kv2 = kv1 + '_' + orbit_keyvalue
-            print(kv2)
-                       
-            for max_D_um in [max_D_um_val]:
-                
+            # for subset of material thickesses      
+            for max_D_um in max_D_um_vals:
+                # get arg for that distance in um
                 max_arg = numpy.argmin(abs(dist - max_D_um)) + 1
-
+                # get isotropic orbit edep, sum for range of interest
                 eDepOrbit_cm2s_n = sum(orbit_Edep_percm2Second_all_shield_nuclear_just_solarHe_iso[kv2][0:max_arg])
                 eDepOrbit_cm2s_e = sum(orbit_Edep_percm2Second_all_shield_electronic_just_solarHe_iso[kv2][0:max_arg])
-
+                # for each test E
                 for testE_num, testE in enumerate(test_Energies):
-
+                    # test energy deposition for proper energy, material
                     this_test_edep_n = test_Ebin_edep_n[test_Ebin_edep_n.E_bin_MeV == testE]
                     this_test_edep_n = this_test_edep_n[this_test_edep_n.material == sm]
                     
                     this_test_edep_e = test_Ebin_edep_e[test_Ebin_edep_e.E_bin_MeV == testE]
                     this_test_edep_e = this_test_edep_e[this_test_edep_e.material == sm]
                     
-                    for test_Fluence in fluences:
-                                      
-                        eDepTest_cm2_n = sum(test_Fluence*this_test_edep_n['E_dep_MeV'][0:max_arg])
-                        eDepTest_cm2_e = sum(test_Fluence*this_test_edep_e['E_dep_MeV'][0:max_arg])
+                    # sum for desired distance, weight by fluence
+                    test_fluence = 1*10**11
+                    eDepTest_cm2_n = sum(test_fluence*this_test_edep_n['E_dep_MeV'][0:max_arg])
+                    eDepTest_cm2_e =  sum(test_fluence*this_test_edep_e['E_dep_MeV'][0:max_arg])
 
-                        time_s_n = eDepTest_cm2_n/eDepOrbit_cm2s_n
-                        time_s_e = eDepTest_cm2_e/eDepOrbit_cm2s_e
+                    time_s_n1 = eDepTest_cm2_n/eDepOrbit_cm2s_n
+                    time_s_e1 = eDepTest_cm2_e/eDepOrbit_cm2s_e
+                    # sum for desired distance, weight by fluence
+                    test_fluence = 2*10**11
+                    eDepTest_cm2_n = sum(test_fluence*this_test_edep_n['E_dep_MeV'][0:max_arg])
+                    eDepTest_cm2_e = sum(test_fluence*this_test_edep_e['E_dep_MeV'][0:max_arg])
 
-                        Al_thicks.append(Al_shielding_gcm2_dict[Al_thickness])
-                        mats.append(sm)
-                        orbits.append(orbit_legvalue)
-                        testEs.append(testE)
-                        times_s_n.append(time_s_n)
-                        times_s_e.append(time_s_e)
-                        max_distances.append(max_D_um)
-                        fluence_values.append(test_Fluence)
-
+                    time_s_n2 = eDepTest_cm2_n/eDepOrbit_cm2s_n
+                    time_s_e2 = eDepTest_cm2_e/eDepOrbit_cm2s_e
+                    
+                    # write keys
+                    Al_thicks.append(Al_shielding_gcm2_dict[Al_thickness])
+                    mats.append(sm)
+                    orbits.append(orbit_legvalue)
+                    testEs.append(testE)
+                    max_distances.append(max_D_um)
+                    
+                    # years per 10**11 p/cm2, note could have just done 0 to E11, but thought that I would check the two
+                    slope_n.append((time_s_n2-time_s_n1)/(60*60*24*365))
+                    slope_e.append((time_s_e2-time_s_e1)/(60*60*24*365))
+                    
                 
-            
-All_equivalence_data_iso_fluence = {'Test_Fluence_gcm2':numpy.array(fluence_values), 'Sample_thickness_um':numpy.array(max_distances), 'Al_Shielding_Thickness_gcm2':numpy.array(Al_thicks), 'Material':numpy.array(mats), 'Orbit':numpy.array(orbits), 'Test_Energy_MeV':numpy.array(testEs), 'Electronic_Equivalence_s': numpy.array(times_s_e), 'Nuclear_Equivalence_s':numpy.array(times_s_n) }
-All_equivalence_iso_fluence = pd.DataFrame(All_equivalence_data_iso_fluence)             
-#All_equivalence_iso.to_csv('All_equivalence_7p5E11_F_iso.csv')
+# store results           
+All_equivalence_data_iso_fluence_slope = {'Sample_thickness_um':numpy.array(max_distances), 'Al_Shielding_Thickness_gcm2':numpy.array(Al_thicks), 'Material':numpy.array(mats), 'Orbit':numpy.array(orbits), 'Test_Energy_MeV':numpy.array(testEs), 'Slope_Year_1E11p_cm2_n': numpy.array(slope_n), 'Slope_Year_1E11p_cm2_e': numpy.array(slope_e)}
+All_equivalence_iso_fluence_slope = pd.DataFrame(All_equivalence_data_iso_fluence_slope)             
+# write results
+All_equivalence_iso_fluence_slope.to_csv('All_equivalence_Y_PerE11_TestFluence_iso_slope.csv')
 
 
-# In[124]:
+# THE REST IS JUST PLOTTING OF RESULTS
+
+# In[14]:
 
 
-matplotlib.pyplot.rcParams['legend.title_fontsize'] = 7
-
-test_Energies_condensed_styles = {
-63.0:styles[0],
-100.0:styles[1],
-230.0:styles[3]  
-}
-
-test_Energies_condensed = [63.0, 100.0, 230.0]
-
-orbits_color = {
-"LEO Polar Sun-synchronous 600km": 'red',
-"LEO Polar Sun-synchronous 800km": 'orange',
-"LEO Inclined Nonpolar ISS": 'green',
-"MEO Molniya": 'cyan',
-"MEO Semi-synchronous GPS": 'blue',
-"HEO Highly-eccentric IBEX": 'purple',
-"HEO Geostationary": 'pink'
-}
-
-styles = ['-', '--', '-.', ':']
-
-fig = matplotlib.pyplot.figure(dpi=200, figsize=(4,7))
-ax = fig.add_subplot(2,1,1)
-orbit_num = 0
-for testE_num, testE in enumerate(test_Energies_condensed):
-    this_E = All_equivalence_iso_fluence[All_equivalence_iso_fluence.Test_Energy_MeV == testE]    
-    orbit_num = 0
-    for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-        this_EO = this_E[this_E.Orbit == orbit_legvalue]        
-        matplotlib.pyplot.plot(fluences, (this_EO.Electronic_Equivalence_s)/(60*60*24*365), orbits_color[orbit_legvalue], linestyle=test_Energies_condensed_styles[testE])    
-        orbit_num += 1
-    
-matplotlib.pyplot.legend(orbits_legend.values(), fontsize=7, title='orbit')
-matplotlib.pyplot.ylabel('Test Irradiation Electronic Energy Loss \n Equivalent Orbit Duration [years]')
-matplotlib.pyplot.ylim([0, 2*10**6])
-matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-matplotlib.pyplot.tick_params(axis='x', labelleft=False)
-matplotlib.pyplot.ticklabel_format(axis="both", style="sci", scilimits=(0,0))
-
-ax = fig.add_subplot(2,1,2)
-orbit_num = 0
-for testE_num, testE in enumerate(test_Energies_condensed):
-    this_E = All_equivalence_iso_fluence[All_equivalence_iso_fluence.Test_Energy_MeV == testE]    
-    orbit_num = 0
-    for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-        this_EO = this_E[this_E.Orbit == orbit_legvalue]        
-        matplotlib.pyplot.plot(fluences, (this_EO.Nuclear_Equivalence_s)/(60*60*24*365), orbits_color[orbit_legvalue], linestyle=test_Energies_condensed_styles[testE])    
-        orbit_num += 1
-    
-matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-matplotlib.pyplot.xlabel(r'Fluence [p/cm$^2$]')
-matplotlib.pyplot.ylabel('Test Irradiation Nuclear Energy Loss \n Equivalent Orbit Duration [years]')
-matplotlib.pyplot.ylim([0, 2*10**6])
-matplotlib.pyplot.ticklabel_format(axis="both", style="sci", scilimits=(0,0))
+orbits_labels = ['LEO Polar \nSun-sync 600km', 'LEO Polar \nSun-sync 800km', 'LEO Inclined \nNonpolar ISS', 'MEO Molniya', 'MEO Semi \nSync GPS', 'HEO Highly \nEccentric IBEX', 'HEO \nGeostationary']
+#seaborn.set(font_scale=1.2)
+seaborn.set_style("whitegrid")
+s = 18
+import matplotlib.pylab as pylab
+params = {'legend.fontsize': s-1,
+          'figure.figsize': (15, 5),
+         'axes.labelsize': s,
+         'axes.titlesize':  s,
+         'xtick.labelsize': s-2,
+         'ytick.labelsize': s-2}
+pylab.rcParams.update(params)
 
 
-from matplotlib.lines import Line2D
-custom_lines = [Line2D([0], [0], color='black', lw=2, linestyle=styles[0]),
-                Line2D([0], [0], color='black', lw=2, linestyle=styles[1]),
-                Line2D([0], [0], color='black', lw=2, linestyle=styles[3])]
+# Al shielding, spread due to: material thickness, test energy, material
+# E
+matplotlib.pyplot.figure()
+df_subset = All_equivalence_iso_fluence_slope.rename(columns={"Al_Shielding_Thickness_gcm2": "Al_shielding"})
+g = seaborn.factorplot(x="Orbit", y='Slope_Year_1E11p_cm2_e', hue="Al_shielding", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g._legend.set_title("Al Shielding \n[g/cm$^2$]")
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Electronic")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
+# N
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y='Slope_Year_1E11p_cm2_n', hue="Al_shielding", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g._legend.set_title("Al Shielding \n[g/cm$^2$]")
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Nuclear")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
 
-ax.legend(custom_lines, ['63 MeV', '100 MeV', '230 MeV'], fontsize=7, title='test proton energy')
+# Material thickness, spread due to: Al shielding, test energy, material
+# E
+df_subset = All_equivalence_iso_fluence_slope[(All_equivalence_iso_fluence_slope.Sample_thickness_um == 10) | (All_equivalence_iso_fluence_slope.Sample_thickness_um == 100) | (All_equivalence_iso_fluence_slope.Sample_thickness_um == 500) | (All_equivalence_iso_fluence_slope.Sample_thickness_um == 1000) | (All_equivalence_iso_fluence_slope.Sample_thickness_um == 2000)]
+df_subset = df_subset.rename(columns={"Sample_thickness_um": "Sample_thick"})
 
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y='Slope_Year_1E11p_cm2_e', hue="Sample_thick", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g._legend.set_title('Sample \nThickness [$\\mu$m]')
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Electronic")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
+# N
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y='Slope_Year_1E11p_cm2_n', hue="Sample_thick", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g._legend.set_title('Sample \nThickness [$\\mu$m]')
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Nuclear")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
+
+
+
+# Test energy, spread due to: Al shielding, material thickness, material
+# E
+df_subset = All_equivalence_iso_fluence_slope[(All_equivalence_iso_fluence_slope.Test_Energy_MeV == 15) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 45) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 63) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 100) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 200)]
+
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y='Slope_Year_1E11p_cm2_e', hue="Test_Energy_MeV", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g._legend.set_title('Test \nEnergy [MeV]')
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Electronic")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
+# N
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y='Slope_Year_1E11p_cm2_n', hue="Test_Energy_MeV", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g._legend.set_title('Test \nEnergy [MeV]')
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Nuclear")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
+
+
+# In[15]:
+
+
+# Test energy, spread due to: Al shielding, material thickness, material
+
+seaborn.set_style("whitegrid")
+df_subset = All_equivalence_iso_fluence_slope[(All_equivalence_iso_fluence_slope.Test_Energy_MeV == 45) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 63) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 100) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 200) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 230)]
+df_subset = df_subset[df_subset.Al_Shielding_Thickness_gcm2 == 1.0]
+#df_subset = df_subset[df_subset.Sample_thickness_um == 500.0]
+# E
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(y="Orbit", x='Slope_Year_1E11p_cm2_e', hue="Test_Energy_MeV", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True, orient='h')
+g._legend.set_title('Test \nEnergy [MeV]')
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Electronic")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.7)
+matplotlib.pyplot.show()
+# N
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(y="Orbit", x='Slope_Year_1E11p_cm2_n', hue="Test_Energy_MeV", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True, orient='h')
+g._legend.set_title('Test \nEnergy [MeV]')
+g._legend.get_title().set_fontsize(s-2)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Nuclear")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.7)
+matplotlib.pyplot.show()
+
+
+# In[17]:
+
+
+orbits_labels_new = ['LEO Polar\nSun-sync\n600km', 'LEO Polar\nSun-sync\n800km', 'LEO Inclined\nNonpolar ISS', 'MEO Molniya', 'MEO Semi\nSync GPS', 'HEO Highly\nEccentric\nIBEX', 'HEO\nGeostationary']
+
+
+seaborn.set_style("ticks")
+
+s = 10
+params = {'legend.fontsize': s-1,
+         'axes.labelsize': s,
+         'axes.titlesize':  s-8,
+         'xtick.labelsize': s,
+         'ytick.labelsize': s,
+         "lines.linewidth": 3.0}
+
+pylab.rcParams.update(params)
+
+
+fig = matplotlib.pyplot.figure(dpi=200, figsize=(7,5))
+gs2 = gridspec.GridSpec(1,2)
+gs2.update(wspace=0.05, hspace=0.05) # set the spacing between axes. 
+
+df_subset = All_equivalence_iso_fluence_slope[(All_equivalence_iso_fluence_slope.Test_Energy_MeV == 45) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 63) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 100) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 200) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 230)]
+df_subset = df_subset[df_subset.Al_Shielding_Thickness_gcm2 == 1.0]
+
+axv = plt.subplot(gs2[0])
+#g = seaborn.factorplot(y="Orbit", x='Slope_Year_1E11p_cm2_e', hue="Test_Energy_MeV", data=df_subset, saturation=5, aspect=3, kind="box", ax = axv)
+g = seaborn.boxplot(y="Orbit", x='Slope_Year_1E11p_cm2_e', hue="Test_Energy_MeV", data=df_subset, linewidth=0.5, fliersize=1)   
+
+matplotlib.pyplot.grid(b=None, which='major', axis='x', color='grey', linestyle='-', linewidth=.7)
+for y_val in [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]:
+    axv.axhline(y_val, color='grey', linestyle='-', linewidth=.7)
+
+matplotlib.pyplot.title('Electronic', size=s)
+g.set_yticklabels(orbits_labels_new)
+
+g.set(xlabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence")
+g.set(xscale="log")
+#g.tick_params(axis='x', labelbottom=False)
+#ax.set_ylabel('')
+#ax.set_xlabel('')
+#matplotlib.pyplot.ylabel("Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Electronic", size=s)
+#g.set(yscale="log")
+#seaborn.despine()
+
+axv.set_ylabel('')
+
+ 
+axv = plt.subplot(gs2[1])
+g = seaborn.boxplot(y="Orbit", x='Slope_Year_1E11p_cm2_n', hue="Test_Energy_MeV", data=df_subset, linewidth=0.5, fliersize=1)   
+
+matplotlib.pyplot.grid(b=None, which='major', axis='x', color='grey', linestyle='-', linewidth=.7)
+for y_val in [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]:
+    axv.axhline(y_val, color='grey', linestyle='-', linewidth=.7)
+
+matplotlib.pyplot.title('Nuclear', size=s)
+matplotlib.pyplot.tick_params(axis='y', labelleft=False)
+g.set(xlabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence")
+g.set(xscale="log")
+#ax.set_xlabel('')
+#matplotlib.pyplot.ylabel("Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Electronic", size=s)
+#g.set(yscale="log")
+#seaborn.despine()
+
+axv.set_ylabel('')
+axv.legend_.remove()
 
 matplotlib.pyplot.show()
 
 
-  
+# In[18]:
 
 
-# In[130]:
+Al_shielding_gcm2_dict_subset = {'0.0': 0.0, '0p5': 0.5, '5p0': 5.0}
+seaborn.set_style("ticks")
 
 
-matplotlib.pyplot.rcParams['legend.title_fontsize'] = 9
+s = 16
+params = {'legend.fontsize': s-1,
+         'axes.labelsize': s+4,
+         'axes.titlesize':  s-5,
+         'xtick.labelsize': s,
+         'ytick.labelsize': s,
+         "lines.linewidth": 3.0}
 
-styles = ['-', '--', '-.', ':']
+pylab.rcParams.update(params)
 
 fig = matplotlib.pyplot.figure(dpi=200, figsize=(20,10))
+gs1 = gridspec.GridSpec(2,3)
+gs1.update(wspace=0.05, hspace=0.05) # set the spacing between axes. 
 
-orders = [1,2,5,6,9,10]
 
-for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict):
+df_subset_energies = All_equivalence_iso_fluence_slope[(All_equivalence_iso_fluence_slope.Test_Energy_MeV == 45) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 63) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 100) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 200) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 230)]
+
+
+for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict_subset):
+    ax = plt.subplot(gs1[num_Al])
+    
+    df_subset = df_subset_energies[df_subset_energies.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict_subset[Al_thickness]]
+    g = seaborn.lineplot(x="Sample_thickness_um", y='Slope_Year_1E11p_cm2_e', hue="Orbit", data=df_subset, ci="sd" , legend=False)
+    
+    
+    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.7)    
+    matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$', size=s+2)
+    g.tick_params(axis='x', labelbottom=False)
+    
+    ax.set_ylabel('')
+    ax.set_xlabel('')
+    
+    if num_Al == 0:
+        matplotlib.pyplot.ylabel("Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Electronic", size=s)
+    else:
+        matplotlib.pyplot.tick_params(axis='y', labelleft=False)
+    g.set(yscale="log")
+    #seaborn.despine()
+    matplotlib.pyplot.ylim([10**(-5), 10**4])
+    
+for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict_subset):
     this_A = All_equivalence_iso[All_equivalence_iso.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict[Al_thickness]]
-    ax = fig.add_subplot(3,4,orders[num_Al])
-    for num, sm in enumerate(material_densities): 
-        this_AS = this_A[this_A.Material == sm]
-        for testE_num, testE in enumerate(test_Energies_condensed):
-            this_AST = this_AS[this_AS.Test_Energy_MeV == testE]               
-            for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-                this_ASOT = this_AST[this_AST.Orbit == orbit_legvalue]                
-                matplotlib.pyplot.loglog(max_D_um_vals, (this_ASOT.Nuclear_Equivalence_s)/(60*60*24*365), color=orbits_color[orbit_legvalue], alpha=0.6, linestyle=test_Energies_condensed_styles[testE])                    
+    ax = plt.subplot(gs1[num_Al+3])
+
+    g.set(yscale="log")
+    df_subset = df_subset_energies[df_subset_energies.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict_subset[Al_thickness]]
+    g = seaborn.lineplot(x="Sample_thickness_um", y='Slope_Year_1E11p_cm2_n', hue="Orbit", data=df_subset,  ci="sd" ,legend=False)
+    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.7)
     
-    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-    matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$', fontsize=12)
+    ax.set_ylabel("")
+    matplotlib.pyplot.xlabel(r'Sample Thickness [$\mu$m]', size=s)
     
-    if (num_Al == 0) or (num_Al == 1):
-        matplotlib.pyplot.title('Nuclear Equivalence \n Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$')        
-    else:    
-        matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$')
-    
-    
-    if (num_Al == 4) or (num_Al == 5):
-        matplotlib.pyplot.xlabel(r'thickness [$\mu m$]', fontsize=12)
+    if num_Al == 0:
+        matplotlib.pyplot.ylabel("Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence - Nuclear", size=s+2)
     else:
-        plt.tick_params(axis='x', labelbottom=False)
-    if num_Al % 2 == 0:
-        matplotlib.pyplot.ylabel('Test Irradiation Orbit \n Equivalent Duration [years]', size=12)
-    else:
-        True
-        #plt.tick_params(axis='y', labelleft=False)
+        matplotlib.pyplot.tick_params(axis='y', labelleft=False)
         
-    #matplotlib.pyplot.ylim([10**(-5), 10**(5)])
-    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-    
-    if num_Al == 4:
-        ax.legend(orbits_legend.values(), fontsize=9, title='orbit')        
-    if num_Al == 5:
-        ax.legend(custom_lines, ['63 MeV', '100 MeV', '230 MeV'], fontsize=9, title='test proton energy')
+    if num_Al == 2:
+        ax.legend(orbits_legend.values(), fontsize=(s-1), loc = 'lower center')
+    g.set(yscale="log")
+    #seaborn.despine()
+    matplotlib.pyplot.ylim([10**(-5), 10**4])
+
+matplotlib.pyplot.show()
 
 
-    
-orders = [3,4,7,8,11,12]
 
-for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict):
-    this_A = All_equivalence_iso[All_equivalence_iso.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict[Al_thickness]]
-    ax = fig.add_subplot(3,4,orders[num_Al])
-    for num, sm in enumerate(material_densities): 
-        this_AS = this_A[this_A.Material == sm]
-        for testE_num, testE in enumerate(test_Energies_condensed):
-            this_AST = this_AS[this_AS.Test_Energy_MeV == testE]               
-            for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-                this_ASOT = this_AST[this_AST.Orbit == orbit_legvalue]                
-                matplotlib.pyplot.loglog(max_D_um_vals, (this_ASOT.Electronic_Equivalence_s)/(60*60*24*365), color=orbits_color[orbit_legvalue], alpha=0.6, linestyle=test_Energies_condensed_styles[testE])                    
+
+# In[19]:
+
+
+All_equivalence_iso_fluence_slope['n_e_Slope_Ratio'] = All_equivalence_iso_fluence_slope['Slope_Year_1E11p_cm2_n']/All_equivalence_iso_fluence_slope['Slope_Year_1E11p_cm2_e']
+All_equivalence_iso_fluence['n_e_Ratio'] = All_equivalence_iso_fluence['Nuclear_Equivalence_s']/ All_equivalence_iso_fluence['Electronic_Equivalence_s']
+
+Al_shielding_gcm2_dict_subset = {'0.0': 0.0, '0p1': 0.1,'1p0': 1.0, '5p0': 5.0}
+seaborn.set_style("ticks")
+
+
+s = 16
+params = {'legend.fontsize': s-1,
+         'axes.labelsize': s+4,
+         'axes.titlesize':  s-8,
+         'xtick.labelsize': s,
+         'ytick.labelsize': s,
+         "lines.linewidth": 3.0}
+
+pylab.rcParams.update(params)
+
+fig = matplotlib.pyplot.figure(dpi=200, figsize=(12,10))
+gs1 = gridspec.GridSpec(2,2)
+gs1.update(wspace=0.03, hspace=0.12) # set the spacing between axes. 
+
+
+df_subset_energies = All_equivalence_iso_fluence[(All_equivalence_iso_fluence.Test_Energy_MeV == 45) | (All_equivalence_iso_fluence.Test_Energy_MeV == 63) | (All_equivalence_iso_fluence.Test_Energy_MeV == 100) | (All_equivalence_iso_fluence.Test_Energy_MeV == 200) | (All_equivalence_iso_fluence.Test_Energy_MeV == 230)]
+
+#df_subset_energies = All_equivalence_iso_fluence_slope[(All_equivalence_iso_fluence_slope.Test_Energy_MeV == 45) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 63) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 100) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 200) | (All_equivalence_iso_fluence_slope.Test_Energy_MeV == 230)]
+
+
+for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict_subset):
+    ax = plt.subplot(gs1[num_Al])
     
-    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
+    df_subset = df_subset_energies[df_subset_energies.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict_subset[Al_thickness]]
+    g = seaborn.lineplot(x="Sample_thickness_um", y='n_e_Ratio', hue="Orbit", data=df_subset, ci="sd" , legend=False)
+    #g = seaborn.lineplot(x="Sample_thickness_um", y='n_e_Slope_Ratio', hue="Orbit", data=df_subset, ci="sd" , legend=False)
     
-    if (num_Al == 0) or (num_Al == 1):
-        matplotlib.pyplot.title('Electronic Equivalence \n Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$')        
-    else:    
-        matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$', fontsize=12)
     
-    if (num_Al == 4) or (num_Al == 5):
-        matplotlib.pyplot.xlabel(r'thickness [$\mu m$]', fontsize=12)
+    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.7)    
+    matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$', size=s)
+    
+    
+    ax.set_ylabel('')
+    ax.set_xlabel('')
+    
+    if (num_Al == 0) or (num_Al == 2):
+        matplotlib.pyplot.ylabel("Ratio of Nuclear to Electronic \n Orbit Time Equivalence", size=s)
     else:
-        plt.tick_params(axis='x', labelbottom=False)
-    #if num_Al % 2 == 0:
-    #    matplotlib.pyplot.ylabel('Test Irradiation Electronic Energy Loss \n Orbit Duration Equivalence [years]')
-    #else:
-    #    True
-        #plt.tick_params(axis='y', labelleft=False)
+        g.tick_params(axis='y', labelleft=False)
+
         
-    #matplotlib.pyplot.ylim([10**(-5), 10**(5)])
-    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-
-
-fig.subplots_adjust(top=0.88)    
-
-matplotlib.pyplot.show()
-
-
-# In[135]:
-
-
-matplotlib.pyplot.rcParams['legend.title_fontsize'] = 9
-
-Al_thickness_dict = {'0.0': 0.0, '0p1': 0.1, '0p5': 0.5, '1p0': 1.0, '2p0': 2.0, '5p0': 5.0}
-
-styles = ['-', '--', '-.', ':']
-
-fig = matplotlib.pyplot.figure(dpi=200, figsize=(10,10))
-
-for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict):
-    this_A = All_equivalence_iso[All_equivalence_iso.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict[Al_thickness]]
-    ax = fig.add_subplot(3,2,num_Al+1)
-    for num, sm in enumerate(material_densities): 
-        #print(sm)
-        if sm == 'Si' or sm == 'GaN' or sm == 'In5Ga5As':
-            this_AS = this_A[this_A.Material == sm]
-            for testE_num, testE in enumerate(test_Energies_condensed):
-                this_AST = this_AS[this_AS.Test_Energy_MeV == testE]               
-                for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-                    this_ASOT = this_AST[this_AST.Orbit == orbit_legvalue]                
-                    matplotlib.pyplot.semilogy(max_D_um_vals, (this_ASOT.Nuclear_Equivalence_s)/(this_ASOT.Electronic_Equivalence_s), color=orbits_color[orbit_legvalue],  linestyle=test_Energies_condensed_styles[testE])                    
-
-        matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-        matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$', fontsize=12)
-        #matplotlib.pyplot.ylim([10**(-1),100])
-        if (num_Al == 4) or (num_Al == 5):
-            matplotlib.pyplot.xlabel(r'thickness [$\mu m$]')
-        else:
-            plt.tick_params(axis='x', labelbottom=False)
-        if num_Al % 2 == 0:
-            matplotlib.pyplot.ylabel('Test Nuclear to Electronic \n Equivalent Orbit Duration Ratio', fontsize=10)
-
-        else:
-            True
-            #plt.tick_params(axis='y', labelleft=False)
-
-        #matplotlib.pyplot.ylim([10**(-5), 10**(5)])
-        matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-
-        if num_Al == 4:
-            ax.legend(orbits_legend.values(), fontsize=9, title='orbit')        
-        if num_Al == 5:
-            ax.legend(custom_lines, ['63 MeV', '100 MeV', '230 MeV'], fontsize=9, title='test proton energy')
-
-        #matplotlib.pyplot.ticklabel_format(axis="y", style="plain")
-      
-    matplotlib.pyplot.fill_between(max_D_um_vals, 0.8, 1.2, color='gray', alpha=0.7)
-                                   
-matplotlib.pyplot.show()
-
-
-
-styles = ['-', '--', '-.', ':']
-
-fig = matplotlib.pyplot.figure(dpi=200)
-
-for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-    this_O = All_equivalence_iso[All_equivalence_iso.Orbit == orbit_legvalue]
-    for num, sm in enumerate(material_densities): 
-        #print(sm)
-        if sm == 'Si':
-            this_OS = this_O[this_O.Material == sm]
-            for testE_num, testE in enumerate(test_Energies_condensed):
-                if testE == 63.0:
-                    this_OST = this_OS[this_OS.Test_Energy_MeV == testE]               
-                    to_plot = []
-                    for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict):
-                        this_OSTA = this_OST[this_OST.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict[Al_thickness]]
-                        v = (this_OSTA[this_OSTA.Sample_thickness_um == 500].Nuclear_Equivalence_s)/(this_OSTA[this_OSTA.Sample_thickness_um == 500].Electronic_Equivalence_s)
-                        to_plot.append(v.values[0])
-                                            
-                    matplotlib.pyplot.semilogy([0.0, 0.1, 0.5, 1.0, 2.0, 5.0], to_plot, color=orbits_color[orbit_legvalue],  linestyle=test_Energies_condensed_styles[testE])                    
-
-        matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-        matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$')
-matplotlib.pyplot.legend(orbits_legend)                                         
-matplotlib.pyplot.show()
-
-
-
-# In[ ]:
-
-
-orbits_color = {
-"LEO Polar Sun-synchronous 600km": 'red',
-"LEO Polar Sun-synchronous 800km": 'orange',
-"LEO Inclined Nonpolar ISS": 'yellow',
-"MEO Molniya": 'green',
-"MEO Semi-synchronous GPS": 'blue',
-"HEO Highly-eccentric IBEX": 'purple',
-"HEO Geostationary": 'pink'
-}
-
-styles = ['-', '--', '-.', ':']
-
-fig = matplotlib.pyplot.figure(dpi=200, figsize=(10,10))
-
-for num_Al, Al_thickness in enumerate(Al_shielding_gcm2_dict):
-    this_A = All_equivalence_iso[All_equivalence_iso.Al_Shielding_Thickness_gcm2 == Al_shielding_gcm2_dict[Al_thickness]]
-    ax = fig.add_subplot(3,2,num_Al+1)
-    for num, sm in enumerate(material_densities): 
-        this_AS = this_A[this_A.Material == sm]
-        for testE_num, testE in enumerate(test_Energies_condensed):
-            this_AST = this_AS[this_AS.Test_Energy_MeV == testE]               
-            for orbit_keyvalue, orbit_legvalue in orbits_legend.items():
-                this_ASOT = this_AST[this_AST.Orbit == orbit_legvalue]                
-                matplotlib.pyplot.loglog(max_D_um_vals, (this_ASOT.Electronic_Equivalence_s)/(60*60*24*365), color=orbits_color[orbit_legvalue], alpha=0.6, linestyle=test_Energies_condensed_styles[testE])                    
-    
-    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
-    matplotlib.pyplot.title('Al thickness ' + str(Al_shielding_gcm2_dict[Al_thickness]) + r' g/cm$^2$')
-    
-    if (num_Al == 4) or (num_Al == 5):
-        matplotlib.pyplot.xlabel(r'thickness [$\mu m$]')
+    if (num_Al == 2) or (num_Al == 3):   
+        matplotlib.pyplot.xlabel(r'Sample Thickness [$\mu$m]', size=s)
     else:
-        plt.tick_params(axis='x', labelbottom=False)
-    if num_Al % 2 == 0:
-        matplotlib.pyplot.ylabel(r'time equivalence [yr]')
-    else:
-        plt.tick_params(axis='y', labelleft=False)
+        g.tick_params(axis='x', labelbottom=False)
+
         
-    matplotlib.pyplot.ylim([10**(-5), 10**(5)])
-    matplotlib.pyplot.grid(b=None, which='major', axis='both', color='grey', linestyle='-', linewidth=.2)
+    if num_Al == 3:
+        ax.legend(orbits_legend.values(), fontsize=(s-3), loc = 'upper center')
+        
+    ax.set_ylim([0.1, 500])
+
+
+    g.set(yscale="log")
+    #seaborn.despine()
     
-    if num_Al == 5:
-        matplotlib.pyplot.legend(orbits_legend.values(), fontsize=9)
-    
-    
+# NUMBER THAT ARE LESS THAN 1
+
+# LEO:
+# ratio decreases with Al shielding
+# ratio decreases with material mat thickness
+# ratio increases with test E
+
+# MEO:
+# ratio incereases 0-0.1 then decreases with Al shielding
+# ratio decreases with material mat thickness
+# ratio increases with test E
+
+# HEO:
+# ratio incereases 0-0.5 then decreases with Al shielding
+# ratio decreases with material mat thickness
+# ratio increases with test E
+
+
+# In[27]:
+
+
+Al_thicks_long = Al_thicks + list(Al_thicks)
+mats_long = mats + list(mats)
+orbits_long = orbits + list(orbits) 
+testEs_long = testEs + list(testEs)
+max_distances_long = max_distances + list(max_distances)
+
+n_label = ['n'] * len(Al_thicks)
+e_label = ['e'] * len(Al_thicks)
+
+# years per 10**11 p/cm2
+slope_long = slope_n + slope_e
+type_long = n_label + e_label
+
+All_equivalence_data_iso_fluence_slope_long = {'Sample_thickness_um':numpy.array(max_distances_long), 'Al_Shielding_Thickness_gcm2':numpy.array(Al_thicks_long), 'Material':numpy.array(mats_long), 'Orbit':numpy.array(orbits_long), 'Test_Energy_MeV':numpy.array(testEs_long), 'Type': numpy.array(type_long), 'Slope_Year_1E11p_cm2': numpy.array(slope_long)}
+All_equivalence_iso_fluence_slope_long = pd.DataFrame(All_equivalence_data_iso_fluence_slope_long)             
+
+s = 18
+import matplotlib.pylab as pylab
+params = {'legend.fontsize': s-1,
+          'figure.figsize': (15, 5),
+         'axes.labelsize': s,
+         'axes.titlesize':  s,
+         'xtick.labelsize': s-2,
+         'ytick.labelsize': s-2}
+pylab.rcParams.update(params)
+
+
+df_subset = All_equivalence_iso_fluence_slope_long[All_equivalence_iso_fluence_slope_long.Sample_thickness_um == 100]
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y="Slope_Year_1E11p_cm2", hue="Type", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
+
+df_subset = All_equivalence_iso_fluence_slope_long[All_equivalence_iso_fluence_slope_long.Al_Shielding_Thickness_gcm2 == 0.0]
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y="Slope_Year_1E11p_cm2", hue="Type", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence")
+g.set_xticklabels(orbits_labels)
+matplotlib.pyplot.show()
+
+df_subset = All_equivalence_iso_fluence_slope_long[(All_equivalence_iso_fluence_slope_long.Al_Shielding_Thickness_gcm2 == 1.0) | (All_equivalence_iso_fluence_slope_long.Al_Shielding_Thickness_gcm2 == 0.0)]
+matplotlib.pyplot.figure()
+g = seaborn.factorplot(x="Orbit", y="Slope_Year_1E11p_cm2", hue="Type", data=df_subset, saturation=5, aspect=3, kind="box", legend_out=True)
+g.set(yscale="log")
+g.set(ylabel="Orbit Equivalence Years per \n10$^{11}$ p/cm$^2$ Test Fluence")
+g.set_xticklabels(orbits_labels)
 matplotlib.pyplot.show()
 
 
-# In[ ]:
+
+# In[29]:
 
 
+df_subset = All_equivalence_iso_fluence_slope_long
+matplotlib.pyplot.figure()
+g = seaborn.lineplot(x="Sample_thickness_um", y="Slope_Year_1E11p_cm2", hue="Orbit", ci="sd" , data=df_subset[df_subset.Type == 'n'])
+matplotlib.pyplot.show()
 
+matplotlib.pyplot.figure()
+g = seaborn.lineplot(x="Al_Shielding_Thickness_gcm2", y="Slope_Year_1E11p_cm2", hue="Orbit" , ci="sd" , data=df_subset[df_subset.Type == 'n'])
+matplotlib.pyplot.show()
+
+matplotlib.pyplot.figure()
+g = seaborn.lineplot(x="Test_Energy_MeV", y="Slope_Year_1E11p_cm2", hue="Orbit" ,ci="sd", data=df_subset[df_subset.Type == 'n'])
+matplotlib.pyplot.show()
+
+matplotlib.pyplot.figure()
+g = seaborn.lineplot(x="Test_Energy_MeV", y="Slope_Year_1E11p_cm2",ci="sd",  hue="Type" , data=df_subset)
+matplotlib.pyplot.show()
 
